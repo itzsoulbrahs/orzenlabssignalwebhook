@@ -134,6 +134,9 @@ def _format_message(payload: Any) -> str:
         if "text" in payload:
             return str(payload["text"])
 
+        if "message" in payload:
+            return str(payload["message"])
+
         if payload:
             lines = [
                 f"<b>{k}:</b> {v}"
