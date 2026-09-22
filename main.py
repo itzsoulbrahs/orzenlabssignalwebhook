@@ -37,7 +37,7 @@ async def root():
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    return {"status": "healthy", "version": "2.0"}
 
 
 @app.post("/webhook")
