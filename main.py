@@ -9,7 +9,7 @@ import requests
 from fastapi import FastAPI, Request, HTTPException, Query
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
