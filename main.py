@@ -12,7 +12,12 @@ load_dotenv(override=True)
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
-THREAD_ID = os.getenv("TELEGRAM_THREAD_ID", "")
+
+STRATEGY_THREADS = {
+    "ORZEN_GOLD": 2,
+    "LIQUIDITY_SNIPER_GOLD": 3,
+    "GOLD_QUICK_SCALPER": 4,
+}
 
 logging.basicConfig(
     level=logging.INFO,
@@ -64,19 +69,28 @@ async def webhook(request: Request):
     if payload is None:
         payload = {}
 
+    # --- Parse strategy_id and route to thread ---
+    strategy_id = payload.get("strategy_id") if isinstance(payload, dict) else None
+
+    if strategy_id is None or strategy_id not in STRATEGY_THREADS:
+        sid_display = strategy_id if strategy_id else "MISSING"
+        logger.warning("Unknown or missing strategy_id: %s — message not sent", sid_display)
+        raise HTTPException(status_code=400, detail=f"Unknown strategy_id: {sid_display}")
+
+    thread_id = STRATEGY_THREADS[strategy_id]
+
     # --- Build Telegram message ---
     msg = _format_message(payload)
     src = request.client.host if request.client else "?"
-    logger.info("Webhook received | ip=%s", src)
+    logger.info("Webhook received | strategy=%s | thread_id=%d | ip=%s", strategy_id, thread_id, src)
 
     # --- Send to Telegram ---
     tg_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    tg_payload: dict[str, Any] = {"chat_id": CHAT_ID, "text": msg}
-    if THREAD_ID:
-        try:
-            tg_payload["message_thread_id"] = int(THREAD_ID)
-        except ValueError:
-            logger.warning("Invalid TELEGRAM_THREAD_ID value: %s — ignoring", THREAD_ID)
+    tg_payload: dict[str, Any] = {
+        "chat_id": CHAT_ID,
+        "text": msg,
+        "message_thread_id": thread_id,
+    }
 
     t1 = time.time()
     try:
@@ -100,7 +114,9 @@ async def webhook(request: Request):
     mid = result.get("result", {}).get("message_id")
     total = time.time() - t0
     logger.info(
-        "Telegram sent | msg_id=%s | tg_latency=%.4fs | total=%.4fs",
+        "Telegram sent | strategy=%s | thread_id=%d | msg_id=%s | tg_latency=%.4fs | total=%.4fs",
+        strategy_id,
+        thread_id,
         mid,
         time.time() - t1,
         total,
