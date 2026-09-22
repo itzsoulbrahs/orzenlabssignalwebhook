@@ -2,11 +2,10 @@ import os
 import time
 import json
 import logging
-import secrets
-from typing import Optional, Any
+from typing import Any
 
 import requests
-from fastapi import FastAPI, Request, HTTPException, Query
+from fastapi import FastAPI, Request, HTTPException
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -14,8 +13,6 @@ load_dotenv(override=True)
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 THREAD_ID = os.getenv("TELEGRAM_THREAD_ID", "")
-WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
-AUTH_ENABLED = os.getenv("WEBHOOK_AUTH_ENABLED", "false").strip().lower() in ("true", "1", "yes")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,18 +38,8 @@ async def health():
 
 
 @app.post("/webhook")
-async def webhook(
-    request: Request,
-    key: Optional[str] = Query(default=None, description="Shared secret for webhook auth"),
-):
+async def webhook(request: Request):
     t0 = time.time()
-
-    # --- Webhook secret check (only if explicitly enabled) ---
-    if AUTH_ENABLED and WEBHOOK_SECRET:
-        if not key or not secrets.compare_digest(str(key), WEBHOOK_SECRET):
-            src = request.client.host if request.client else "?"
-            logger.error("Webhook rejected | reason=bad_secret | ip=%s", src)
-            raise HTTPException(status_code=403, detail="Unauthorized")
 
     # --- Credential check ---
     if not BOT_TOKEN or not CHAT_ID:
