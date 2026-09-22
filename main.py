@@ -15,6 +15,7 @@ BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 THREAD_ID = os.getenv("TELEGRAM_THREAD_ID", "")
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
+AUTH_ENABLED = os.getenv("WEBHOOK_AUTH_ENABLED", "false").strip().lower() in ("true", "1", "yes")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -46,8 +47,8 @@ async def webhook(
 ):
     t0 = time.time()
 
-    # --- Webhook secret check ---
-    if WEBHOOK_SECRET:
+    # --- Webhook secret check (only if explicitly enabled) ---
+    if AUTH_ENABLED and WEBHOOK_SECRET:
         if not key or not secrets.compare_digest(str(key), WEBHOOK_SECRET):
             src = request.client.host if request.client else "?"
             logger.error("Webhook rejected | reason=bad_secret | ip=%s", src)
